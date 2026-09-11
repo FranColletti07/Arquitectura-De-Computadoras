@@ -1,0 +1,89 @@
+ORG 1000h
+PASS db ?, ?, ?, ?
+CLAVE db '1', '2', '3', '4'
+PERM db "Acceso permitido"
+NOPERM db "Acceso denegado", 10
+BLOQ db "Acceso bloqueado"
+FIN db ?
+ORG 3000h
+LEER_CONTRA:
+  INT 6
+  INC BX
+  DEC AL
+  JNZ LEER_CONTRA
+  RET
+COMPARAR_STRING:
+  push BX
+  mov bx, sp
+  push ax
+  push cx
+  push dx
+  mov dx, [BX + 4]
+  MOV ax, [BX + 6]
+  bucle: 
+    push BX
+    mov bx, ax
+    mov ch, [bx]
+    mov bx, dx
+    cmp ch, [BX]
+    pop bx
+    JZ iguales
+    MOV byte ptr [BX+6], 0
+    JMP final
+    iguales:
+      INC DX
+      INC AX
+      DEC cl
+      JNZ bucle
+      MOV byte ptr [BX + 6], 0FFh
+  final:
+  pop dx
+  pop cx
+  pop ax
+  pop bx
+  ret
+MOSTRAR_MENSAJE:
+  push bx
+  push ax
+  cmp ah, 0FFh
+  jnz ERROR
+  mov bx, offset PERM
+  mov al, offset NOPERM - OFFSET PERM
+  mov dh, 0FFh
+  jmp finMos
+ERROR:
+  inc dl
+  cmp dl, 5
+  jz bloqueado
+  mov bx, offset NOPERM
+  mov al, OFFSET BLOQ - OFFSET NOPERM
+  jmp finMos
+  bloqueado:
+    mov dh, 0FFh
+    mov bx, offset BLOQ
+    mov al, offset FIN - offset BLOQ
+  finMos:
+    INT 7
+    pop ax
+    pop bx
+    ret
+ORG 2000h
+mov dl, 0
+while:
+  mov bx, offset PASS
+  mov al, offset CLAVE - OFFSET PASS
+  call LEER_CONTRA
+  mov cl, offset CLAVE - OFFSET PASS
+  MOV BX, OFFSET PASS
+  push bx
+  MOV BX, OFFSET CLAVE
+  push BX
+  CALL COMPARAR_STRING
+  POP BX
+  POP BX
+  MOV AH, BL
+  CALL MOSTRAR_MENSAJE
+  cmp dh, 0FFH
+  jnz while 
+int 0
+end
