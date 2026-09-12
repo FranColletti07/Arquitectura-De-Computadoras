@@ -1,0 +1,145 @@
+org 1000h
+prom dw ?
+porciento dw ?
+mensaje db "Cargue las notas (numeros del 0 al 9)", 10
+mensaje_fin db "Porcentaje de aprobados: "
+vector db ?
+org 3000h
+DIV:
+; En ax recibe el dividendo
+; y en ax devuelve el cociente
+; En cx el divisor
+; En dx el resto
+push bx
+mov bx, 0; buffer cociente
+bucle_div:
+cmp ax, cx
+js fin_div
+sub ax, cx
+inc bx    
+jmp bucle_div
+fin_div:
+mov dx, ax
+mov ax, bx
+pop bx
+ret
+MUL:
+; En ax el n1
+; En cx el n2
+; Retorna en ax el resultado
+push cx
+cmp ax, 0
+jz cero
+cmp cx, 0
+jz cero
+push dx
+mov dx, ax
+bucle_mul:
+  dec cx
+  jz fin_mul
+  add ax, dx
+  jmp bucle_mul
+fin_mul:
+pop dx
+pop cx
+ret
+cero:
+mov ax, 0
+pop cx
+ret
+CANT_APROBADOS:
+; En bx la dir del vector
+; En cx la long
+; Devuelve en ax la cantidad n>=4 
+push cx
+mov ax, 0
+bucle_aprobados:
+  cmp byte ptr [bx], 4
+  js menor
+  inc ax
+  menor:
+  inc bx
+  dec cx
+  jnz bucle_aprobados
+pop cx
+RET
+PORCENTAJE:
+; ax = cant aprobados
+; cx = cant total
+mov dx, cx
+mov cx, ax
+mov ax, 100
+call mul
+; ax = cant aprobados * 100
+mov cx, dx ; cx = cant total
+call div
+; ax = (cant aprobados * 100) / total
+
+RET
+CARGAR_VECTOR:
+;En bx la dir de inicio del vector
+;En cl va a estar la long del vector
+int 6
+cmp byte ptr [bx], '.'
+jz fin_carga
+inc cx
+sub byte ptr [bx], 30h
+inc bx
+jmp cargar_vector
+fin_carga:
+ret
+informar_porcentaje:
+  ; En dx el número
+  ; En bx el mensaje
+  ; En al la longitud
+  push bx
+  mov ah, 0
+  add bx, ax
+  cmp dx, 100
+  jz es_cien
+  ; En cl voy a guardar el caracter del n°
+  push dx
+  push ax
+  mov ax, dx
+  mov cx, 10
+  call div
+  mov cl, dl
+  add cl, 30h
+  mov byte ptr [bx], cl
+  inc bx
+  mov cl, al
+  add cl, 30h
+  mov byte ptr [bx], cl
+  mov byte ptr [bx+1], '%'
+  pop ax
+  pop dx
+  pop bx
+  add ax, 2  
+  int 7
+  ret
+es_cien:
+  mov byte ptr [bx], '1'
+  mov byte ptr [bx+1], '0'
+  mov byte ptr [bx+2], '0'
+  mov byte ptr [bx+3], '%'
+  add al, 4
+  pop bx
+  int 7
+  ret
+org 2000h
+mov ax, offset mensaje_fin - offset mensaje
+mov bx, offset mensaje
+int 7
+mov cx, 0
+mov bx, offset vector
+call CARGAR_VECTOR
+mov bx, offset vector
+call CANT_APROBADOS
+call PORCENTAJE
+; En ax el porcentaje
+mov dx, ax
+mov bx, offset mensaje_fin
+mov al, offset vector - offset mensaje_fin
+call informar_porcentaje
+int 0
+end
