@@ -1,0 +1,89 @@
+org 1000h
+intentos db 50
+longitud_max db 10
+str1 db "Ingresá la palabra a adivinar (son maximo 10 caracteres)", 10
+str2 db "Comenzá a adivinar", 10
+str3 db 10, "Ganaste!"
+str4 db "Perdiste, el string era "
+palabra db ?
+org 3000h
+longitud_insuficiente:
+int 0
+leerPalabra:
+; Recibe en ch la longitud maxima de la palabra
+; Devuelve en cl la longitud de la palabra
+push bx 
+mov cl, 0
+mov bx, offset palabra
+bucle:
+  int 6
+  cmp byte ptr [bx], '.'
+  jz fin
+  inc cl
+  cmp cl, ch
+  jz fin
+  inc bx
+  jmp bucle
+fin:
+  pop bx
+  ret
+
+fase1:
+mov bx, offset str1
+mov al, offset str2 - offset str1
+int 7
+mov ch, longitud_max
+call leerPalabra
+cmp cl, 0
+jz longitud_insuficiente
+mov bx, offset str2
+mov al, offset str3 - offset str2
+int 7
+ret
+fase2:
+;Recibe en cl la longitud de la palabra a adivinar
+;recibe en bx la palabra a adivinar
+;recibe en ch la cantidad de intentos totales
+;pone en ah la longitud actual de la palabra
+;pone en al el caracter correcto de la palabra
+mov ah, 0
+bucle2:
+  mov al, [bx]
+  push bx
+  add bl, cl
+  int 6
+  cmp [BX], al
+  jnz fallo
+  inc ah
+  cmp ah, cl
+  jz victoria
+  pop bx
+  mov al, 1
+  int 7
+  inc bx
+  jmp bucle2
+  fallo:
+    dec ch
+    jz derrota
+    pop bx
+    jmp bucle2
+derrota:
+  mov bx, offset str4
+  mov al, offset palabra - offset str4
+  add al, cl
+  int 7
+  pop bx
+  ret
+victoria:
+  mov bx, offset str3
+  mov al, offset str4 - offset str3
+  int 7
+  pop bx
+  ret
+org 2000h
+call fase1
+mov bx, offset palabra
+mov ch, intentos
+call fase2
+int 0
+end
