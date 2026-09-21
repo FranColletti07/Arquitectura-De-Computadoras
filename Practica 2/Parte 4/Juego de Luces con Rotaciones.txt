@@ -1,0 +1,52 @@
+PB equ 31h
+CB equ 33h
+org 1000h
+valor db 1
+org 3000h
+rotar_izq:
+; rota a la izq el valor en [bx]
+push ax
+mov al, [bx]
+add al, [bx]
+adc al, 0
+mov [bx], al
+pop ax
+ret
+rotar_izq_n:
+; en [bx] el valor a rotar
+; en cl la cantidad de veces
+call rotar_izq
+dec cl
+jnz rotar_izq_n
+ret
+rotar_der_n:
+; rota a la derecha [bx], ch veces
+push cx
+mov cl, 8
+sub cl, ch
+call rotar_izq_n
+pop cx
+ret
+org 2000h
+mov al, 0; todo salida
+out CB, al
+mov bx, offset valor
+mov cl, 7 
+bucle_izq:
+    mov al, [bx]
+    out PB, al
+    call rotar_izq
+    dec cl
+    jnz bucle_izq
+mov cl, 7
+mov ch, 1
+bucle_derecha:
+    mov al, [bx]
+    out PB, al
+    call rotar_der_n
+    dec cl
+    jnz bucle_derecha
+mov cl, 7
+jmp bucle_izq
+int 0
+end

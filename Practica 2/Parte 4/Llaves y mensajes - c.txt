@@ -1,0 +1,30 @@
+PA equ 30h 
+PB equ 31h
+CA equ 32h
+CB equ 33h
+org 1000h
+mensaje db "ACTIVADO", 10
+patron db 81h
+org 2000h
+mov al, 0FFh
+out CA, al
+mov al, 0
+out CB, al
+mov bx, offset mensaje
+mov ah, 0; va a almacenar el último leído
+bucle:
+    in al, PA
+    cmp al, patron
+    jnz else
+        cmp ah, al
+        jz bucle
+        mov ah, al 
+        mov al, offset patron - offset mensaje 
+        int 7
+        jmp bucle
+    else:
+        mov ah, al
+        jmp bucle
+int 0
+end
+

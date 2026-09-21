@@ -1,0 +1,40 @@
+;PA equ 30h
+PB equ 31h
+;CA equ 32h
+CB equ 33h
+org 1000h
+cadena db "UNLP"
+fin db 255
+org 3000h
+transmitir_caracter:
+; en bx la dir del char
+push ax
+mov al, [bx]
+out PB, al
+mov al, 0
+out PB, al
+pop ax
+ret
+transmitir_cadena:
+; recibe en bx la dir de la cadena
+; recibe en cl la long de la cadena
+push bx
+push cx
+bucle:
+  call transmitir_caracter
+  inc bx
+  dec cl
+  jnz bucle
+mov al, 255
+out PB, al ; el 255 para indicar el fin de la transmisión
+pop cx
+pop bx
+ret
+org 2000h
+mov al, 0; todo de salida 0000.0000
+out CB, al
+mov bx, offset cadena
+mov cl, offset fin - offset cadena
+call transmitir_cadena
+int 0
+end

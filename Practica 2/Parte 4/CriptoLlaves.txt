@@ -1,0 +1,27 @@
+PA equ 30h
+PB equ 31h
+CA equ 32h
+CB equ 33h
+org 1000h
+mensaje db "GANASTE"
+clave db 10101010b
+org 2000h
+mov al, 0FFh; preparo la entrada
+out CA, al
+mov al, 0; preparo para la salida
+out CB, al
+mov ah, clave
+bucle:
+    in al, PA
+    cmp al, ah
+    jz fin
+    xor al, ah
+    not al
+    out PB, al
+    jmp bucle
+fin:
+mov al, offset clave -offset mensaje
+mov bx, offset mensaje
+int 7
+int 0
+end

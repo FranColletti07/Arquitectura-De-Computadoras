@@ -1,0 +1,37 @@
+PA equ 30h 
+PB equ 31h
+CA equ 32h
+CB equ 33h
+org 1000h
+cadena db ?
+org 3000h
+lectura:
+; recibe en bx la posicion donde debe guardar la cadena
+push bx
+push ax
+mov cl, 0; testing
+bucle:
+    mov al, 0FFh
+    out PB, al
+    in al, PA
+    and al, 0FFh
+    jz fin
+    mov [BX], al
+    inc bx
+    inc cl; testing
+    jmp bucle
+fin:
+    pop ax
+    pop bx
+    ret 
+org 2000h
+mov al, 0FFh
+out CA, al; lo prepara para la entrada
+mov al, 0
+out CB, al; lo prepara para la salida
+mov bx, offset cadena
+call lectura
+mov al, cl; testing
+int 7; testing
+int 0
+end
