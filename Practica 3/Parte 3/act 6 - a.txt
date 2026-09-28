@@ -1,0 +1,72 @@
+cont equ 10h
+comp equ 11h
+eoi equ 20h
+imr equ 21h
+int0 equ 24h
+int1 equ 25h
+org 40h
+dir_f10_handler dw f10_handler
+org 80h
+dir_timer_handler dw timer_handler
+org 3000h
+f10_handler:
+    push ax
+    call config_timer
+    mov al, eoi
+    out eoi, al
+    pop ax
+    iret
+timer_handler:
+    push ax
+    mov al, 0
+    out cont, al
+    mov al, 2
+    mov bx, offset valor
+    int 7
+    mov al, valor
+    cmp al, '0'
+    jnz else
+    mov cl, 1; "flag"
+    mov al, 0FFh
+    out imr, al
+    else:
+    dec al
+    mov valor, al
+    mov al, eoi
+    out eoi, al
+    pop ax
+    iret
+config_pic:
+    mov al, 0FEh; 1111 1110
+    out imr, al
+    mov al, 10h 
+    out int0, al
+    mov al, 20h
+    out int1, al
+    ret
+config_timer:
+    cli
+    push ax
+    mov al, 0FDh; 1111 1101
+    out imr, al; desactivo el f10 porque se supone que debe activarse una sola vez
+    mov al, 1
+    out comp, al
+    mov al, 0
+    out cont, al
+    pop ax
+    sti
+    ret   
+org 1000h
+valor db ?, 10 ; en ascii
+org 2000h
+cli
+call config_pic
+mov bx, offset valor
+int 6
+mov cl, 0; mi "flag"
+sti 
+bucle:
+cmp cl, 1
+jnz bucle
+int 0
+end

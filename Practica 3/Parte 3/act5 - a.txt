@@ -1,0 +1,42 @@
+EOI equ 20h 
+imr equ 21h
+cont equ 10h 
+comp equ 11h
+vector_int1 equ 10h
+int1 equ 25h
+org 40h
+ptr_handler dw timer_handler
+org 1000h
+msj db "Vamos las interrupciones!", 10
+fin db ?
+org 3000H
+init:
+cli
+push ax
+mov al, 0FDh
+out imr, al
+mov al, vector_int1
+out int1, al
+mov al, 2h
+out comp, al
+mov al, 0
+out cont, al
+pop ax
+sti
+ret
+timer_handler:
+push ax
+mov al, 0
+out cont, al
+mov al, offset fin - offset msj 
+mov bx, offset msj
+int 7
+mov al, eoi
+out eoi, al
+pop ax
+iret
+org 2000H
+call init
+bucle:jmp bucle
+int 0
+end
