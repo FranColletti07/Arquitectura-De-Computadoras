@@ -1,0 +1,73 @@
+;Timer y Luces ⭐⭐ Escribir un programa que debe leer el estado de las llaves y enviarlo a una
+;subrutina. La subrutina debe llamarse LUCES12 y recibe el estado por referencia a través de la pila. Si
+;el estado indica que la llave 7 (la de más a la izquierda) está prendida entonces debe encender todas las
+;luces por 12 segundos y luego apagar todas las luces. En caso contrario no debe hacer nada. El
+;programa debe repetir estas operaciones continuamente, y no termina nunca.
+
+comp equ 10h 
+cont equ 11h
+
+eoi equ 20h 
+imr equ 21H
+int1 equ 25h
+
+PA equ 30h 
+PB equ 31h
+CA equ 32h 
+CB equ 33h 
+
+org 40h 
+ptr_handler dw handler
+
+org 3000h 
+handler:
+    push ax
+    mov al, 0
+    out PB, al ; apaga todas las luces 
+    mov al, 0FFh
+    out imr, al ; desactiva el timer 
+    mov dh, 0 ; apaga la flag
+    mov al, eoi 
+    out eoi, al  
+    pop ax
+iret 
+LUCES12:
+    mov bx, sp 
+    add bx, 2 
+    mov dl, [bx] ; estado de las luces ahora en dl
+    and dl, 080h
+    jnz else
+    mov dh, 1 ; flag de "activado" 
+    cli 
+    mov al, 0FFh
+    out PB, al
+    mov al, 0FDh; 1111 1101
+    out imr, al 
+    mov al, 12 
+    out comp, al 
+    mov al, 0
+    out cont, al 
+    sti 
+    else:
+ret 
+config_pio:
+    mov al, 080h
+    out CA, al 
+    mov al, 0FFh 
+    out CB, al 
+    mov al, 0
+    out PB, al
+ret 
+org 2000h 
+cli 
+call config_pio
+sti 
+mov dh, 0 
+bucle:
+cmp dh, 0
+jz bucle ; hasta que se active la llave 7
+bucle_timer:
+cmp dh, 1
+jz bucle_timer
+jmp bucle  
+end 

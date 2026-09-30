@@ -1,40 +1,89 @@
-EOI EQU 20H
-IMR EQU 21H
-INT0 equ 24h
-N_F10 EQU 10
-org 40
-PTR_F10 DW Handler
-org 1000h
-msj db "vamos las interrupciones!", 10
-fin db 5, 10
-ORG 2000H
-call init
-mov cl, fin
-LAZO:
-and cl, 0ffh
-JNZ LAZO
-int 0
-ORG 3000H
-init:
-cli 
-push ax
-mov al, 0feh
-out imr, al
-mov al, n_f10
-out int0,al
-pop ax
-sti
+;F10, lectura e Impresora con PIO ⭐⭐⭐ 
+;Escribir un programa que debe mostrar en pantalla el
+;mensaje “PRESIONE F10 PARA COMENZAR” y una vez que el usuario presiona F10, leer de teclado un
+;mensaje de 10 caracteres. Este mensaje debe luego ser enviado a través de la pila a una subrutina para
+;imprimirse en la impresora mediante el PIO. La configuración del PIO también debe hacerse en una
+;subrutina aparte.
+eoi equ 20H
+imr equ 21H
+int0 equ 24h
+
+PA equ 30h 
+PB equ 31h
+CA equ 32h
+CB equ 33h
+
+org 40h
+ptr_handler dw handler
+
+org 3000H
+handler:
+    mov ch, 1
+    mov al, 0FFh 
+    out imr, al 
+    mov al, eoi 
+    out eoi, al
+iret 
+config_pio:
+    mov al, 0
+    out CB, al 
+    mov al, 1
+    out CA, al 
+ret  
+config_pic:
+    mov al, 0FEh; 1111 1110
+    out imr, al 
+    mov al, 10h 
+    out int0, al 
+ret 
+flanco:
+    push ax 
+    in al, PA 
+    and al, 0FCH; 1111 1101
+    out PA, al 
+    in al, PA 
+    or al, 2
+    out PA, al  
+    pop ax 
+ret 
+imprimir:
+    mov bx, sp
+    add bx, 2; obtengo la dir del inicio de la cadena
+    mov bx, [bx]
+    mov cl, 10; longitud  
+    bucle_imprimir:
+        mov al, [bx]
+        out PB, al 
+        call flanco 
+        inc bx 
+        dec cl 
+        jnz bucle_imprimir
 ret
-Handler:
-PUSH AX
-push bx
-mov al, offset fin - offset msj
-mov bx, offset msj
+org 1000h
+mensaje db "PRESIONE F10 PARA COMENZAR"
+fin_mensaje db ?
+leido db ?
+org 2000H
+cli 
+call config_pio
+call config_pic
+mov bx, offset mensaje 
+mov al, offset fin_mensaje - offset mensaje
 int 7
-dec cl
-MOV AL, EOI
-out eoi, al
-pop bx
-POP AX
-IRET
-END
+mov ch, 0; mi flag de "COMENZAR"
+sti 
+bucle:
+    cmp ch, 1
+jnz bucle; hasta que presiona f10 
+mov cl, 0
+leer:
+    int 6
+    inc bx 
+    inc cl 
+    cmp cl, 10
+    jnz leer
+mov bx, offset mensaje 
+push bx 
+call imprimir
+int 0 
+end 

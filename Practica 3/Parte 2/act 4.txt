@@ -1,0 +1,40 @@
+EOI EQU 20H
+IMR EQU 21H
+INT0 equ 24h
+N_F10 EQU 10
+org 40
+PTR_F10 DW Handler
+org 1000h
+msj db "vamos las interrupciones!", 10
+fin db 5, 10
+ORG 2000H
+call init
+mov cl, fin
+LAZO:
+and cl, 0ffh
+JNZ LAZO
+int 0
+ORG 3000H
+init:
+cli 
+push ax
+mov al, 0feh
+out imr, al
+mov al, n_f10
+out int0,al
+pop ax
+sti
+ret
+Handler:
+PUSH AX
+push bx
+mov al, offset fin - offset msj
+mov bx, offset msj
+int 7
+dec cl
+MOV AL, EOI
+out eoi, al
+pop bx
+POP AX
+IRET
+END

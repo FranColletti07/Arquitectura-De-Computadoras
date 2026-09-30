@@ -1,0 +1,69 @@
+data equ 40h
+state equ 41h
+eoi equ 20h 
+imr equ 21h
+int0 equ 24h
+int2 equ 26h
+org 40h
+dir_handler_handshake dw handshake_handler
+org 44h
+dir_hanlder_f10 dw f10_handler
+org 1000h
+msj db ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+fin_msj db ?
+org 3000h
+handshake_handler:
+    cmp ah, 0 
+    jnz else
+    mov al, 0ffh
+    out imr, al
+    jmp fin_handler
+    else:
+    mov al, [bx]
+    out data, al 
+    inc bx
+    dec ah
+    fin_handler:
+    mov al, 20h 
+    out eoi, al
+iret
+f10_handler:
+    cli
+    mov al, 0ffh
+    out imr, al
+    mov ah, 0; pongo la cantidad de chars restantes en cero para que termine el programa
+    sti
+    mov al, eoi
+    out eoi, al
+iret
+leer:
+    ; recibe en bx la pos inicial
+    ; y en ah la longitud final que debe tener el mensaje
+    int 6
+    inc bx
+    dec ah
+    jnz leer
+ret
+org 2000h
+cli
+mov al, 0FAh; 1111 1010
+out imr, al
+mov al, 10h ; 10h*4h = 40h
+out int2, al
+mov al, 11h ; 11h*4h = 44h
+out int0, al
+mov bx, offset msj
+mov ah, offset fin_msj - offset msj
+in al, state
+or al, 080h
+out state, al
+push ax ; lo hice así por un tema de eficiencia solamente, el push y pop pueden ir adentro de "leer" perfectamente
+push bx
+call leer
+pop bx
+pop ax
+sti
+bucle: cmp ah, 0; cant de caracteres
+jnz bucle
+int 0
+end

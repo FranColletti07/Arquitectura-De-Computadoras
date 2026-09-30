@@ -1,0 +1,42 @@
+data equ 40h
+state equ 41h
+eoi equ 20h 
+imr equ 21h
+int2 equ 26h
+org 40h
+dir_handler dw handshake_handler
+org 1000h
+msj db "UNIVERSIDAD NACIONAL DE LA PLATA"
+fin_msj db ?
+org 3000h
+handshake_handler:
+    cmp ah, 0 
+    jnz else
+    mov al, 0ffh
+    out imr, al
+    jmp fin_handler
+    else:
+    mov al, [bx]
+    out data, al 
+    inc bx
+    dec ah
+    fin_handler:
+    mov al, 20h 
+    out eoi, al
+iret
+org 2000h
+cli
+mov al, 0FBh; 1111 1011
+out imr, al
+mov al, 10h ; 10h*4h = 40h
+out int2, al
+mov bx, offset msj
+mov ah, offset fin_msj - offset msj
+in al, state
+or al, 080h
+out state, al
+sti
+bucle: cmp ah, 0; cant de caracteres
+jnz bucle
+int 0
+end

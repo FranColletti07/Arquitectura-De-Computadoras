@@ -1,0 +1,82 @@
+;Imprimir mensaje leído, longitud arbitraria ⭐.
+;Escribir un programa que solicite ingresar caracteres
+;por teclado y los almacene en la memoria. Al presionar la tecla F10, se envían a la impresora a través
+;de la PIO. No es necesario mostrar los caracteres en la pantalla.
+eoi equ 20h 
+imr equ 21h
+int0 equ 24h
+PA equ 30h 
+PB equ 31h
+CA equ 32h
+CB equ 33h
+org 1000h
+msj db ?
+org 40h
+dir_handler dw handler 
+org 3000h
+handler:
+    push ax
+    mov al, 0FFh 
+    out imr, al 
+    mov al, 20h
+    out eoi, al
+    pop ax
+    mov ah, 1; orden de imprimir
+iret
+imprimir:
+    ; en bx la pos de inicio
+    ; en cl la longitud
+    mov al, [bx]
+    out PB, al
+    in al, PA 
+    and al, 0FDh; 1111 1101
+    out PA, al 
+    in al, PA 
+    or al, 2; 0000 0010
+    out PA, al 
+    inc bx
+    dec cl 
+    jnz imprimir
+ret
+leer:
+    ; en bx la pos donde debe guardarlo
+    ; en cl la longitud actual
+    ; en ah el flag de impreso
+    int 6
+    cli 
+    cmp ah, 1; 0 = leyendo
+    jz fin_leer
+    inc bx
+    inc cl
+    fin_leer:
+    sti
+ret
+config_pio:
+    push ax
+    mov al, 0
+    out CB, al 
+    mov al, 1
+    out CA, al
+    pop ax
+ret
+org 2000h
+cli
+mov al, 0FEh ; 1111 1110
+out imr, al
+mov al, 10h; 10h*4h = 40h 
+out int0, al
+mov ah, 0; flag de "imprimir"
+call config_pio
+mov bx, offset msj
+mov cl, 0
+sti
+bucle:
+    cmp ah, 1
+    jz fin
+    call leer 
+jmp bucle
+fin:
+mov bx, offset msj
+call imprimir
+int 0
+end

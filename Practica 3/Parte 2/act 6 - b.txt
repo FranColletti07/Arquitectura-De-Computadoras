@@ -1,0 +1,87 @@
+cont equ 10h
+comp equ 11h
+eoi equ 20h
+imr equ 21h
+int0 equ 24h
+int1 equ 25h
+org 40h
+dir_f10_handler dw f10_handler
+org 80h
+dir_timer_handler dw timer_handler
+org 3000h
+f10_handler:
+    push ax
+    cmp cl, 1; si es = 1 estaba pausado
+    jnz else
+    mov cl, 0
+    call reanudar_timer
+    jmp fin_f10
+    else:
+    call pausar_timer
+    fin_f10:
+    mov al, eoi
+    out eoi, al
+    pop ax
+iret
+pausar_timer:
+    cli
+    push ax
+    mov al, 0FEh; 1111 1110
+    out imr, al
+    mov cl, 1
+    pop ax
+    sti
+ret
+reanudar_timer:
+    cli
+    push ax
+    mov al, 0FCh; 1111 1100
+    out imr, al
+    mov al, 0
+    out cont, al
+    pop ax
+    sti
+ret
+timer_handler:
+    push ax
+    mov al, 0
+    out cont, al
+    mov al, 2
+    mov bx, offset valor
+    int 7
+    mov al, valor
+    cmp al, '0'
+    jnz else_
+    mov cl, 1; "flag de pausado"
+    mov al, 0FEh; descativo timer
+    out imr, al
+    mov valor, '9'; preparo para un proximo conteo
+    jmp fin_timer
+    else_:
+    dec al
+    mov valor, al
+    fin_timer:
+    mov al, eoi
+    out eoi, al
+    pop ax
+    iret
+config_pic:
+    mov al, 0FEh; 1111 1110
+    out imr, al
+    mov al, 10h 
+    out int0, al
+    mov al, 20h
+    out int1, al
+    ret
+org 1000h
+valor db '9', 10 ; en ascii
+org 2000h
+cli
+call config_pic
+mov al, 1
+out comp, al; para configurar el timer
+mov cl, 1; mi flag de "pausa"
+sti 
+bucle: jmp bucle
+int 0
+end
